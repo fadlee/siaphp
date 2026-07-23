@@ -1,0 +1,41 @@
+{
+  "name": "siaphp",
+  "version": "0.1.0",
+  "description": "Deploy project PHP ke shared hosting tanpa SSH.",
+  "type": "module",
+  "bin": {
+    "siaphp": "./bin/siaphp.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test",
+    "check": "node --check bin/siaphp.js && node --check src/**/*.js",
+    "prepack": "npm test && npm run check"
+  },
+  "keywords": [
+    "php",
+    "deploy",
+    "deployment",
+    "shared-hosting",
+    "cli"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@inquirer/prompts": "^7.8.4",
+    "commander": "^14.0.0",
+    "fast-glob": "^3.3.3",
+    "yazl": "^3.3.1"
+  },
+  "devDependencies": {
+    "php-parser": "^3.7.0"
+  }
+}
