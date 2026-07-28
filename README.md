@@ -128,6 +128,29 @@ npx siaphp init \
 Gunakan `--skip-check` bila agent belum di-upload. Setelah upload selesai,
 jalankan `npx siaphp doctor`.
 
+## Publish ke npm
+
+Pastikan sudah login ke npm:
+
+```bash
+npm login
+```
+
+Cek isi paket lokal tanpa publish:
+
+```bash
+bun run deploy:dry-run
+```
+
+Publish ke npmjs agar bisa dipakai dengan `npx siaphp`:
+
+```bash
+bun run deploy
+```
+
+Script publish akan menjalankan `prepack`, sehingga test dan check harus lulus
+sebelum paket dikirim ke npm.
+
 ## Lisensi
 
 MIT

@@ -4,7 +4,7 @@
   "description": "Deploy project PHP ke shared hosting tanpa SSH.",
   "type": "module",
   "bin": {
-    "siaphp": "./bin/siaphp.js"
+    "siaphp": "bin/siaphp.js"
   },
   "files": [
     "bin",
@@ -15,7 +15,9 @@
   "scripts": {
     "test": "node --test",
     "check": "node src/check.js",
-    "prepack": "npm test && npm run check"
+    "prepack": "npm test && npm run check",
+    "deploy": "npm publish --access public",
+    "deploy:dry-run": "npm pack --dry-run"
   },
   "keywords": [
     "php",
