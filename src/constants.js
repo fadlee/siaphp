@@ -1,5 +1,9 @@
-export const PACKAGE_NAME = "siaphp";
-export const PACKAGE_VERSION = "0.1.0";
+import { createRequire } from "node:module";
+
+const packageJson = createRequire(import.meta.url)("../package.json");
+
+export const PACKAGE_NAME = packageJson.name;
+export const PACKAGE_VERSION = packageJson.version;
 export const CONFIG_FILE = "siaphp.json";
 export const STATE_DIRECTORY = ".siaphp";
 export const CREDENTIALS_FILE = ".siaphp/credentials.json";

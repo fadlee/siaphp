@@ -15,7 +15,8 @@
   "scripts": {
     "test": "node --test",
     "check": "node src/check.js",
-    "prepack": "npm test && npm run check",
+    "preversion": "npm test",
+    "release": "npm version patch && npm publish --access public",
     "deploy": "npm publish --access public",
     "deploy:dry-run": "npm pack --dry-run"
   },

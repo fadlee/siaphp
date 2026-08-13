@@ -49,7 +49,7 @@ authenticate($action, $payloadHash);
 if ($action === 'doctor') {
     respond(200, [
         'ok' => true,
-        'agentVersion' => '0.1.0',
+        'agentVersion' => '__SIAPHP_VERSION__',
         'phpVersion' => PHP_VERSION,
         'zipArchive' => class_exists('ZipArchive'),
         'targetWritable' => is_dir($targetRoot) && is_writable($targetRoot),

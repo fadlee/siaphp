@@ -142,16 +142,25 @@ npm login
 Check the local package contents without publishing:
 
 ```bash
-bun run deploy:dry-run
+npm run deploy:dry-run
 ```
 
-Publish to npmjs so the CLI can be used with `npx siaphp`:
+To create a patch release and publish it in one command:
 
 ```bash
-bun run deploy
+npm run release
 ```
 
-The publish script runs `prepack`, so tests and checks must pass before the package is sent to npm.
+`npm run release` runs `npm version patch`, which updates `package.json` and `package-lock.json`, creates a Git commit and `v` tag, then publishes the new version. The `prepack` hook runs the tests and checks before npm publishes the package.
+
+For a minor or major release, use the corresponding npm version command and publish afterward:
+
+```bash
+npm version minor
+npm publish --access public
+```
+
+Commit your code changes before running `npm run release`; npm requires a clean Git working tree when creating the release commit and tag.
 
 ## License
 

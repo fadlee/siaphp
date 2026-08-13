@@ -1,7 +1,7 @@
 import { chmod, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { DEFAULT_MAX_UPLOAD_BYTES } from "./constants.js";
+import { DEFAULT_MAX_UPLOAD_BYTES, PACKAGE_VERSION } from "./constants.js";
 
 const templatePath = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -16,6 +16,7 @@ export async function renderAgent({ secret, structure }) {
   return template
     .replaceAll("__SIAPHP_SECRET__", secret)
     .replaceAll("__SIAPHP_TARGET_ROOT__", targetExpression)
+    .replaceAll("__SIAPHP_VERSION__", PACKAGE_VERSION)
     .replaceAll("__SIAPHP_MAX_UPLOAD_BYTES__", String(DEFAULT_MAX_UPLOAD_BYTES));
 }
 
