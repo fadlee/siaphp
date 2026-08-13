@@ -33,7 +33,8 @@ export async function uploadDeploymentInChunks({
   secret,
   archivePath,
   maxUploadBytes,
-  chunkSize = Math.min(8 * 1024 * 1024, Math.max(1, maxUploadBytes - 1024 * 1024))
+  chunkSize = Math.min(8 * 1024 * 1024, Math.max(1, maxUploadBytes - 1024 * 1024)),
+  onProgress = () => {}
 }) {
   if (!Number.isInteger(chunkSize) || chunkSize < 1 || chunkSize >= maxUploadBytes) {
     throw new Error("Ukuran chunk harus berupa bilangan positif dan lebih kecil dari batas agent.");
@@ -79,6 +80,12 @@ export async function uploadDeploymentInChunks({
         `${uploadId}\n${archiveHash}\n${index}\n${totalChunks}`
       ),
       body: form
+    });
+    onProgress({
+      uploadedBytes: Math.min((index + 1) * chunkSize, archive.length),
+      totalBytes: archive.length,
+      chunkIndex: index,
+      totalChunks
     });
   }
 

@@ -30,16 +30,24 @@ test("chunk upload initializes, uploads chunks, and finalizes", async () => {
 
   try {
     await writeFile(archivePath, Buffer.from("0123456789abcdef"));
+    const progress = [];
     const result = await uploadDeploymentInChunks({
       agentUrl: `http://127.0.0.1:${server.address().port}/agent.php`,
       secret,
       archivePath,
       maxUploadBytes: 10,
-      chunkSize: 5
+      chunkSize: 5,
+      onProgress: (event) => progress.push(event)
     });
 
     assert.deepEqual(result, { ok: true, release: "chunk-release", deployedFiles: 2 });
     assert.equal(requests.length, 6);
+    assert.deepEqual(progress, [
+      { uploadedBytes: 5, totalBytes: 16, chunkIndex: 0, totalChunks: 4 },
+      { uploadedBytes: 10, totalBytes: 16, chunkIndex: 1, totalChunks: 4 },
+      { uploadedBytes: 15, totalBytes: 16, chunkIndex: 2, totalChunks: 4 },
+      { uploadedBytes: 16, totalBytes: 16, chunkIndex: 3, totalChunks: 4 }
+    ]);
     assert.match(requests[0].body.toString(), /chunk-init/);
     assert.match(requests[1].body.toString(), /name="chunk"/);
     assert.match(requests[2].body.toString(), /name="chunk"/);

@@ -78,7 +78,11 @@ export async function deployCommand(options) {
             secret: credentials.secret,
             archivePath,
             maxUploadBytes: status.maxUploadBytes,
-            chunkSize: config.chunkSize
+            chunkSize: config.chunkSize,
+            onProgress: ({ uploadedBytes, totalBytes, chunkIndex, totalChunks }) => {
+              const percentage = Math.round((uploadedBytes / totalBytes) * 100);
+              output.info(`Upload ${percentage}% (${chunkIndex + 1}/${totalChunks} chunk, ${formatBytes(uploadedBytes)}/${formatBytes(totalBytes)})`);
+            }
           })
         : await uploadDeployment({
             agentUrl: config.agentUrl,
