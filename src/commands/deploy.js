@@ -57,6 +57,9 @@ export async function deployCommand(options) {
       throw new Error("Archive kosong. Periksa konfigurasi exclude.");
     }
 
+    if (!options.dryRun) {
+      assertArchiveFitsAgent(archive, status);
+    }
     output.success(`Archive siap: ${formatBytes(archive.bytes)}.`);
     if (options.verbose) {
       output.info(`Archive entries: ${archive.entries}`);
@@ -84,6 +87,14 @@ export async function deployCommand(options) {
     if (!options.dryRun && tempDirectory) {
       await rm(tempDirectory, { recursive: true, force: true });
     }
+  }
+}
+
+export function assertArchiveFitsAgent(archive, status) {
+  if (archive.bytes > status.maxUploadBytes) {
+    throw new Error(
+      `Archive terlalu besar: ${formatBytes(archive.bytes)}. Batas agent: ${formatBytes(status.maxUploadBytes)}. Periksa konfigurasi exclude dan upload_max_filesize/post_max_size di hosting.`
+    );
   }
 }
 

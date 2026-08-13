@@ -45,6 +45,11 @@ async function requestJson(url, options) {
   try {
     payload = JSON.parse(text);
   } catch {
+    if (response.status === 413) {
+      throw new Error(
+        "Upload ditolak (HTTP 413): archive terlalu besar. Periksa upload_max_filesize dan post_max_size di hosting."
+      );
+    }
     throw new Error(
       `Agent mengembalikan respons non-JSON (HTTP ${response.status}). Periksa URL dan log PHP.`
     );

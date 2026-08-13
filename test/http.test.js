@@ -67,6 +67,31 @@ test("doctor dan deploy mengirim request bertanda tangan", async () => {
   }
 });
 
+test("upload reports a clear message for HTTP 413 responses", async () => {
+  const server = http.createServer((_request, response) => {
+    response.writeHead(413, { "Content-Type": "text/html" });
+    response.end("Payload Too Large");
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const directory = await mkdtemp(path.join(os.tmpdir(), "siaphp-http-413-"));
+  const archivePath = path.join(directory, "release.zip");
+
+  try {
+    await writeFile(archivePath, "fake zip");
+    await assert.rejects(
+      () => uploadDeployment({
+        agentUrl: `http://127.0.0.1:${server.address().port}/agent.php`,
+        secret: "integration-secret",
+        archivePath
+      }),
+      /HTTP 413.*upload_max_filesize.*post_max_size/
+    );
+  } finally {
+    server.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
 async function readBody(stream) {
   const chunks = [];
   for await (const chunk of stream) chunks.push(chunk);

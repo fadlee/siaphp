@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /*
- * siaphp agent v0.1.0
+ * siaphp agent v__SIAPHP_VERSION__
  * Generated for one project. Do not commit or share this file.
  */
 
