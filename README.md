@@ -1,54 +1,53 @@
 # siaphp
 
-Deploy project PHP ke shared hosting tanpa SSH.
+Deploy PHP projects to shared hosting without SSH.
 
-`siaphp` adalah CLI npm kecil yang mengemas source code menjadi ZIP, menandatangani
-request dengan HMAC, lalu mengirimkannya ke satu file agent PHP di hosting.
+`siaphp` is a small npm CLI that packages source code into a ZIP archive, signs the request with HMAC, and sends it to a single PHP agent file on your hosting account.
 
-> Status: MVP v0.1. Gunakan dahulu pada proyek non-kritis dan simpan backup hosting.
+> Status: MVP v0.1. Use it first with non-critical projects and keep a hosting backup.
 
-## Kebutuhan
+## Requirements
 
-- Node.js 20 atau lebih baru di komputer lokal
-- PHP 8.0 atau lebih baru di hosting
-- Ekstensi PHP `ZipArchive`
-- HTTPS dan akses tulis PHP ke folder tujuan
+- Node.js 20 or newer on your local machine
+- PHP 8.0 or newer on your hosting account
+- PHP `ZipArchive` extension
+- HTTPS and PHP write access to the target directory
 
-## Mulai
+## Getting started
 
-Jalankan dari root project PHP:
+Run this command from the root of your PHP project:
 
 ```bash
 npx siaphp init
 ```
 
-Wizard akan:
+The wizard will:
 
-1. Memilih struktur `index.php` di root atau `public/index.php`.
-2. Membuat `.siaphp/siaphp-agent.php` dengan secret unik.
-3. Meminta agent tersebut di-upload ke hosting.
-4. Menyimpan URL agent di `siaphp.json`.
-5. Menyimpan secret lokal di `.siaphp/credentials.json`.
+1. Detect whether `index.php` is in the root directory or at `public/index.php`.
+2. Create `.siaphp/siaphp-agent.php` with a unique secret.
+3. Ask you to upload the agent to your hosting account.
+4. Save the agent URL in `siaphp.json`.
+5. Save the local secret in `.siaphp/credentials.json`.
 
-Setelah agent di-upload:
+After uploading the agent:
 
 ```bash
 npx siaphp doctor
 npx siaphp deploy
 ```
 
-Untuk melihat isi paket deploy tanpa mengunggah:
+To inspect the deployment package without uploading it:
 
 ```bash
 npx siaphp deploy --dry-run
 unzip -l .siaphp/siaphp-dry-run.zip
 ```
 
-## Penempatan agent
+## Agent placement
 
 ### Flat
 
-Untuk proyek dengan `index.php` di root, upload agent ke folder yang sama:
+For projects with `index.php` in the root directory, upload the agent to the same folder:
 
 ```text
 public_html/
@@ -58,8 +57,7 @@ public_html/
 
 ### Public folder
 
-Untuk proyek dengan `public/index.php`, document root domain harus mengarah ke
-folder `public`. Upload agent ke folder tersebut:
+For projects with `public/index.php`, the domain document root must point to the `public` folder. Upload the agent to that folder:
 
 ```text
 project/
@@ -69,11 +67,11 @@ project/
     siaphp-agent.php
 ```
 
-Agent akan memasang release ke folder `project`, satu tingkat di atas `public`.
+The agent installs each release into the `project` folder, one level above `public`.
 
-## Konfigurasi
+## Configuration
 
-Contoh `siaphp.json`:
+Example `siaphp.json`:
 
 ```json
 {
@@ -95,28 +93,26 @@ Contoh `siaphp.json`:
 }
 ```
 
-Sesuaikan `exclude` bila project memerlukan file lain. Folder `vendor` sengaja
-tidak dikecualikan karena banyak shared hosting tidak menyediakan Composer.
+Adjust `exclude` if your project needs additional files excluded. The `vendor` directory is intentionally not excluded because many shared hosts do not provide Composer.
 
-## Keamanan
+## Security
 
-- Setiap request memakai HMAC SHA-256, timestamp, dan nonce sekali pakai.
-- Hash archive ikut ditandatangani dan diverifikasi setelah upload.
-- Agent menolak path traversal, symlink, archive berlebihan, dan deploy paralel.
-- `.env`, `.git`, konfigurasi lokal, dan credentials dikecualikan secara default.
-- Secret hanya berada di agent dan `.siaphp/credentials.json`.
+- Every request uses HMAC SHA-256, a timestamp, and a one-time nonce.
+- The archive hash is signed and verified after upload.
+- The agent rejects path traversal, symlinks, oversized archives, and parallel deployments.
+- `.env`, `.git`, local configuration, and credentials are excluded by default.
+- The secret is stored only in the agent and `.siaphp/credentials.json`.
 
-Jangan commit folder `.siaphp`. Hapus agent dari hosting bila siaphp tidak lagi
-digunakan.
+Do not commit the `.siaphp` directory. Remove the agent from your hosting account when you no longer use siaphp.
 
-## Batasan MVP
+## MVP limitations
 
-- Deploy menambah dan mengganti file, tetapi belum menghapus file lama.
-- Belum ada atomic release, rollback, shared directory, migration, atau build hook.
-- Agent mengandalkan batas `upload_max_filesize` dan `post_max_size` dari hosting.
-- Penggantian beberapa file tidak bersifat transaksional. Backup tetap diperlukan.
+- Deployments add and replace files but do not remove old files yet.
+- Atomic releases, rollbacks, shared directories, migrations, and build hooks are not supported yet.
+- The agent relies on the hosting limits defined by `upload_max_filesize` and `post_max_size`.
+- Replacing multiple files is not transactional. Backups are still required.
 
-## Mode non-interaktif
+## Non-interactive mode
 
 ```bash
 npx siaphp init \
@@ -125,8 +121,7 @@ npx siaphp init \
   --yes
 ```
 
-Gunakan `--skip-check` bila agent belum di-upload. Setelah upload selesai,
-jalankan `npx siaphp doctor`.
+Use `--skip-check` if the agent has not been uploaded yet. After uploading it, run `npx siaphp doctor`.
 
 ## Publishing to npm
 
@@ -148,9 +143,8 @@ Publish to npmjs so the CLI can be used with `npx siaphp`:
 bun run deploy
 ```
 
-The publish script runs `prepack`, so tests and checks must pass before the
-package is sent to npm.
+The publish script runs `prepack`, so tests and checks must pass before the package is sent to npm.
 
-## Lisensi
+## License
 
 MIT

@@ -1,7 +1,7 @@
 {
   "name": "siaphp",
-  "version": "0.1.0",
-  "description": "Deploy project PHP ke shared hosting tanpa SSH.",
+  "version": "0.1.1",
+  "description": "Deploy PHP projects to shared hosting without SSH.",
   "type": "module",
   "bin": {
     "siaphp": "bin/siaphp.js"
