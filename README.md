@@ -145,20 +145,19 @@ Check the local package contents without publishing:
 npm run deploy:dry-run
 ```
 
-To create a patch release and publish it in one command:
+To create a release interactively:
 
 ```bash
 npm run release
 ```
 
-`npm run release` runs `npm version patch`, which updates `package.json` and `package-lock.json`, creates a Git commit and `v` tag, then publishes the new version. The `prepack` hook runs the tests and checks before npm publishes the package.
+The release wizard lets you choose one of:
 
-For a minor or major release, use the corresponding npm version command and publish afterward:
+- `patch` for bug fixes (`0.1.1` → `0.1.2`)
+- `minor` for backward-compatible features (`0.1.1` → `0.2.0`)
+- `major` for breaking changes (`0.1.1` → `1.0.0`)
 
-```bash
-npm version minor
-npm publish --access public
-```
+After you choose a type, the script runs `npm version`, creates a Git commit and `v` tag, then publishes the new version. The `preversion` hook runs the tests before the version is changed.
 
 Commit your code changes before running `npm run release`; npm requires a clean Git working tree when creating the release commit and tag.
 

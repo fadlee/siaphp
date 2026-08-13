@@ -1,6 +1,6 @@
 {
   "name": "siaphp",
-  "version": "0.1.2",
+  "version": "0.1.1",
   "description": "Deploy PHP projects to shared hosting without SSH.",
   "type": "module",
   "bin": {
@@ -8,6 +8,7 @@
   },
   "files": [
     "bin",
+    "scripts",
     "src",
     "README.md",
     "LICENSE"
@@ -16,7 +17,7 @@
     "test": "node --test",
     "check": "node src/check.js",
     "preversion": "npm test",
-    "release": "npm version patch && npm publish --access public",
+    "release": "node scripts/release.js",
     "deploy": "npm publish --access public",
     "deploy:dry-run": "npm pack --dry-run"
   },
