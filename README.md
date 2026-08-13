@@ -120,6 +120,18 @@ Do not commit the `.siaphp` directory. Remove the agent from your hosting accoun
 - The agent relies on the hosting limits defined by `upload_max_filesize` and `post_max_size`.
 - Replacing multiple files is not transactional. Backups are still required.
 
+When the archive exceeds the agent's per-request upload limit, siaphp automatically uses chunked upload if the agent supports it. Each chunk is uploaded separately, verified with SHA-256, and assembled before the release is extracted.
+
+The default chunk size is 8 MB. You can lower it in `siaphp.json` when the hosting provider has a smaller request limit:
+
+```json
+{
+  "chunkSize": 8388608
+}
+```
+
+Chunked upload requires a newly generated agent from the same siaphp release. Upload `.siaphp/siaphp-agent.php` again after upgrading the CLI. Existing agents report `chunkUpload: false` or omit the field and will produce the normal archive-size error.
+
 ## Non-interactive mode
 
 ```bash

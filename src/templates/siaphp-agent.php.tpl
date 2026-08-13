@@ -40,11 +40,29 @@ if (str_contains($contentType, 'application/json')) {
 }
 
 $action = (string) ($input['action'] ?? '');
-$payloadHash = $action === 'deploy'
-    ? strtolower((string) ($input['archiveHash'] ?? ''))
-    : hash('sha256', '');
+$payloadHash = match ($action) {
+    'chunk-upload' => strtolower((string) ($input['chunkHash'] ?? '')),
+    'deploy', 'chunk-init', 'chunk-finalize' => strtolower((string) ($input['archiveHash'] ?? '')),
+    default => hash('sha256', ''),
+};
 
-authenticate($action, $payloadHash);
+$signatureContext = match ($action) {
+    'chunk-upload' => implode("\n", [
+        (string) ($input['uploadId'] ?? ''),
+        (string) ($input['archiveHash'] ?? ''),
+        (string) ($input['chunkIndex'] ?? ''),
+        (string) ($input['totalChunks'] ?? ''),
+    ]),
+    'chunk-init', 'chunk-finalize' => implode("\n", [
+        (string) ($input['uploadId'] ?? ''),
+        (string) ($input['archiveHash'] ?? ''),
+        (string) ($input['totalBytes'] ?? ''),
+        (string) ($input['totalChunks'] ?? ''),
+    ]),
+    default => '',
+};
+
+authenticate($action, $payloadHash, $signatureContext);
 
 if ($action === 'doctor') {
     respond(200, [
@@ -54,18 +72,34 @@ if ($action === 'doctor') {
         'zipArchive' => class_exists('ZipArchive'),
         'targetWritable' => is_dir($targetRoot) && is_writable($targetRoot),
         'maxUploadBytes' => SIAPHP_MAX_UPLOAD_BYTES,
+        'chunkUpload' => true,
     ]);
+}
+
+if ($action === 'chunk-init') {
+    initializeChunkUpload($input);
+    respond(200, ['ok' => true]);
+}
+
+if ($action === 'chunk-upload') {
+    storeChunk($input);
+    respond(200, ['ok' => true]);
+}
+
+if ($action === 'chunk-finalize') {
+    $result = finalizeChunkUpload($targetRoot, $input);
+    respond(200, $result);
 }
 
 if ($action !== 'deploy') {
     respond(400, ['ok' => false, 'error' => 'Action tidak dikenal.']);
 }
 
-deploy($targetRoot, $payloadHash);
+respond(200, deploy($targetRoot, $payloadHash));
 
-function authenticate(string $action, string $payloadHash): void
+function authenticate(string $action, string $payloadHash, string $context = ''): void
 {
-    if (!in_array($action, ['doctor', 'deploy'], true)) {
+    if (!in_array($action, ['doctor', 'deploy', 'chunk-init', 'chunk-upload', 'chunk-finalize'], true)) {
         respond(400, ['ok' => false, 'error' => 'Action tidak dikenal.']);
     }
 
@@ -85,7 +119,7 @@ function authenticate(string $action, string $payloadHash): void
         respond(401, ['ok' => false, 'error' => 'Nonce request tidak valid.']);
     }
 
-    $canonical = implode("\n", [$timestamp, $nonce, $action, $payloadHash]);
+    $canonical = implode("\n", array_filter([$timestamp, $nonce, $action, $payloadHash, $context], static fn ($value) => $value !== ''));
     $expected = hash_hmac('sha256', $canonical, SIAPHP_SECRET);
 
     if (!hash_equals($expected, strtolower($signature))) {
@@ -128,7 +162,105 @@ function rememberNonce(string $nonce, int $timestamp): void
     fclose($handle);
 }
 
-function deploy(string $targetRoot, string $archiveHash): void
+function chunkDirectory(string $uploadId): string
+{
+    if (!preg_match('/^[a-f0-9-]{36}$/i', $uploadId)) {
+        respond(400, ['ok' => false, 'error' => 'Upload ID tidak valid.']);
+    }
+    return sys_get_temp_dir() . '/siaphp-upload-' . $uploadId;
+}
+
+function initializeChunkUpload(array $input): void
+{
+    $uploadId = (string) ($input['uploadId'] ?? '');
+    $directory = chunkDirectory($uploadId);
+    $totalBytes = filter_var($input['totalBytes'] ?? null, FILTER_VALIDATE_INT);
+    $totalChunks = filter_var($input['totalChunks'] ?? null, FILTER_VALIDATE_INT);
+    $archiveHash = strtolower((string) ($input['archiveHash'] ?? ''));
+    if ($totalBytes === false || $totalBytes < 1 || $totalChunks === false || $totalChunks < 1 || !preg_match('/^[a-f0-9]{64}$/', $archiveHash)) {
+        respond(400, ['ok' => false, 'error' => 'Metadata chunk tidak valid.']);
+    }
+    if (!mkdir($directory, 0700, true) && !is_dir($directory)) {
+        respond(500, ['ok' => false, 'error' => 'Folder upload chunk tidak dapat dibuat.']);
+    }
+    file_put_contents($directory . '/manifest.json', json_encode([
+        'archiveHash' => $archiveHash,
+        'totalBytes' => $totalBytes,
+        'totalChunks' => $totalChunks,
+    ], JSON_THROW_ON_ERROR), LOCK_EX);
+}
+
+function readChunkManifest(string $directory): array
+{
+    $manifest = json_decode((string) @file_get_contents($directory . '/manifest.json'), true);
+    if (!is_array($manifest)) {
+        respond(404, ['ok' => false, 'error' => 'Upload chunk tidak ditemukan.']);
+    }
+    return $manifest;
+}
+
+function storeChunk(array $input): void
+{
+    $directory = chunkDirectory((string) ($input['uploadId'] ?? ''));
+    $manifest = readChunkManifest($directory);
+    $index = filter_var($input['chunkIndex'] ?? null, FILTER_VALIDATE_INT);
+    $totalChunks = filter_var($input['totalChunks'] ?? null, FILTER_VALIDATE_INT);
+    $chunkHash = strtolower((string) ($input['chunkHash'] ?? ''));
+    if ($index === false || $index < 0 || $index >= $manifest['totalChunks'] || $totalChunks !== $manifest['totalChunks'] || !preg_match('/^[a-f0-9]{64}$/', $chunkHash)) {
+        respond(400, ['ok' => false, 'error' => 'Metadata chunk tidak valid.']);
+    }
+    if (!isset($_FILES['chunk']) || !is_uploaded_file($_FILES['chunk']['tmp_name']) || (int) $_FILES['chunk']['error'] !== UPLOAD_ERR_OK) {
+        respond(400, ['ok' => false, 'error' => 'Chunk tidak ditemukan.']);
+    }
+    $source = (string) $_FILES['chunk']['tmp_name'];
+    if (!hash_equals($chunkHash, hash_file('sha256', $source))) {
+        respond(400, ['ok' => false, 'error' => 'Checksum chunk tidak cocok.']);
+    }
+    if (!move_uploaded_file($source, $directory . '/chunk-' . $index . '.part')) {
+        respond(500, ['ok' => false, 'error' => 'Chunk tidak dapat disimpan.']);
+    }
+}
+
+function finalizeChunkUpload(string $targetRoot, array $input): array
+{
+    $directory = chunkDirectory((string) ($input['uploadId'] ?? ''));
+    $manifest = readChunkManifest($directory);
+    if ((string) ($input['archiveHash'] ?? '') !== $manifest['archiveHash'] || (int) ($input['totalBytes'] ?? 0) !== $manifest['totalBytes'] || (int) ($input['totalChunks'] ?? 0) !== $manifest['totalChunks']) {
+        respond(400, ['ok' => false, 'error' => 'Metadata upload tidak cocok.']);
+    }
+    $archivePath = $directory . '/release.zip';
+    $output = fopen($archivePath, 'wb');
+    if ($output === false) {
+        respond(500, ['ok' => false, 'error' => 'Archive chunk tidak dapat dibuat.']);
+    }
+    try {
+        for ($index = 0; $index < $manifest['totalChunks']; $index++) {
+            $chunkPath = $directory . '/chunk-' . $index . '.part';
+            if (!is_file($chunkPath)) {
+                fclose($output);
+                respond(400, ['ok' => false, 'error' => 'Chunk belum lengkap.']);
+            }
+            $chunk = fopen($chunkPath, 'rb');
+            if ($chunk === false || stream_copy_to_stream($chunk, $output) === false) {
+                if ($chunk !== false) fclose($chunk);
+                fclose($output);
+                respond(500, ['ok' => false, 'error' => 'Chunk tidak dapat digabungkan.']);
+            }
+            fclose($chunk);
+        }
+    } finally {
+        if (is_resource($output)) fclose($output);
+    }
+    if (filesize($archivePath) !== $manifest['totalBytes'] || !hash_equals($manifest['archiveHash'], hash_file('sha256', $archivePath))) {
+        removeTree($directory);
+        respond(400, ['ok' => false, 'error' => 'Checksum archive tidak cocok.']);
+    }
+    $result = deploy($targetRoot, $manifest['archiveHash'], $archivePath);
+    removeTree($directory);
+    return $result;
+}
+
+function deploy(string $targetRoot, string $archiveHash, ?string $uploadedFile = null): array
 {
     if (!class_exists('ZipArchive')) {
         respond(503, ['ok' => false, 'error' => 'Ekstensi PHP ZipArchive belum aktif.']);
@@ -136,17 +268,16 @@ function deploy(string $targetRoot, string $archiveHash): void
     if (!is_dir($targetRoot) || !is_writable($targetRoot)) {
         respond(503, ['ok' => false, 'error' => 'Folder target tidak dapat ditulis oleh PHP.']);
     }
-    if (!isset($_FILES['archive']) || !is_uploaded_file($_FILES['archive']['tmp_name'])) {
+    if ($uploadedFile === null && (!isset($_FILES['archive']) || !is_uploaded_file($_FILES['archive']['tmp_name']))) {
         respond(400, ['ok' => false, 'error' => 'Archive deploy tidak ditemukan.']);
     }
-    if ((int) $_FILES['archive']['error'] !== UPLOAD_ERR_OK) {
+    $uploadedFile ??= (string) $_FILES['archive']['tmp_name'];
+    if (!is_file($uploadedFile)) {
+        respond(400, ['ok' => false, 'error' => 'Archive deploy tidak ditemukan.']);
+    }
+    if ($uploadedFile === (string) ($_FILES['archive']['tmp_name'] ?? '') && (int) $_FILES['archive']['error'] !== UPLOAD_ERR_OK) {
         respond(400, ['ok' => false, 'error' => 'Upload archive gagal dengan kode ' . $_FILES['archive']['error'] . '.']);
     }
-    if ((int) $_FILES['archive']['size'] > SIAPHP_MAX_UPLOAD_BYTES) {
-        respond(413, ['ok' => false, 'error' => 'Archive melebihi batas upload agent.']);
-    }
-
-    $uploadedFile = (string) $_FILES['archive']['tmp_name'];
     if (!hash_equals($archiveHash, hash_file('sha256', $uploadedFile))) {
         respond(400, ['ok' => false, 'error' => 'Checksum archive tidak cocok.']);
     }
@@ -186,11 +317,11 @@ function deploy(string $targetRoot, string $archiveHash): void
         fclose($lock);
     }
 
-    respond(200, [
+    return [
         'ok' => true,
         'release' => $release,
         'deployedFiles' => $deployedFiles,
-    ]);
+    ];
 }
 
 function validateArchive(ZipArchive $zip): void

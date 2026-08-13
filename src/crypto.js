@@ -8,10 +8,10 @@ export function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
 }
 
-export function createSignedHeaders(secret, action, payloadHash = sha256("")) {
+export function createSignedHeaders(secret, action, payloadHash = sha256(""), context = "") {
   const timestamp = Math.floor(Date.now() / 1000).toString();
   const nonce = randomUUID();
-  const canonical = [timestamp, nonce, action, payloadHash].join("\n");
+  const canonical = [timestamp, nonce, action, payloadHash, ...(context ? [context] : [])].join("\n");
   const signature = createHmac("sha256", secret).update(canonical).digest("hex");
 
   return {

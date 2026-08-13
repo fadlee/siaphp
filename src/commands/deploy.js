@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { createArchive, formatBytes } from "../archive.js";
 import { fileExists, loadProject } from "../config.js";
-import { checkAgent, uploadDeployment } from "../http.js";
+import { checkAgent, uploadDeployment, uploadDeploymentInChunks } from "../http.js";
 import { output } from "../output.js";
 
 export async function deployCommand(options) {
@@ -57,7 +57,7 @@ export async function deployCommand(options) {
       throw new Error("Archive kosong. Periksa konfigurasi exclude.");
     }
 
-    if (!options.dryRun) {
+    if (!options.dryRun && archive.bytes > status.maxUploadBytes && !status.chunkUpload) {
       assertArchiveFitsAgent(archive, status);
     }
     output.success(`Archive siap: ${formatBytes(archive.bytes)}.`);
@@ -71,12 +71,20 @@ export async function deployCommand(options) {
       return;
     }
 
-    output.step("Mengunggah dan memasang release...");
-    const result = await uploadDeployment({
-      agentUrl: config.agentUrl,
-      secret: credentials.secret,
-      archivePath
-    });
+    const result =
+      archive.bytes > status.maxUploadBytes
+        ? await uploadDeploymentInChunks({
+            agentUrl: config.agentUrl,
+            secret: credentials.secret,
+            archivePath,
+            maxUploadBytes: status.maxUploadBytes,
+            chunkSize: config.chunkSize
+          })
+        : await uploadDeployment({
+            agentUrl: config.agentUrl,
+            secret: credentials.secret,
+            archivePath
+          });
 
     if (options.verbose) {
       output.info(`Release: ${result.release}`);

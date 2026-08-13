@@ -20,6 +20,16 @@ test("agent flat menargetkan folder tempat agent berada", async () => {
   assert.doesNotThrow(() => parser.parseCode(agent, "siaphp-agent.php"));
 });
 
+test("agent includes authenticated chunk upload handlers", async () => {
+  const agent = await renderAgent({ secret: "c".repeat(64), structure: "flat" });
+
+  assert.match(agent, /chunk-init/);
+  assert.match(agent, /chunk-upload/);
+  assert.match(agent, /chunk-finalize/);
+  assert.match(agent, /hash_file\('sha256', \$source\)/);
+  assert.doesNotThrow(() => parser.parseCode(agent, "siaphp-agent.php"));
+});
+
 test("agent public menargetkan parent dari document root", async () => {
   const agent = await renderAgent({ secret: "b".repeat(64), structure: "public" });
 

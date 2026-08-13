@@ -3,6 +3,7 @@ import path from "node:path";
 import {
   CONFIG_FILE,
   CREDENTIALS_FILE,
+  DEFAULT_CHUNK_BYTES,
   DEFAULT_EXCLUDES,
   STATE_DIRECTORY
 } from "./constants.js";
@@ -28,6 +29,7 @@ export function createConfig({ structure, agentUrl }) {
     agentUrl,
     structure,
     entrypoint: structure === "public" ? "public/index.php" : "index.php",
+    chunkSize: DEFAULT_CHUNK_BYTES,
     exclude: [...DEFAULT_EXCLUDES]
   };
 }
@@ -73,6 +75,9 @@ export function validateConfig(config) {
   }
   if (typeof config.agentUrl !== "string" || !config.agentUrl) {
     throw new Error("agentUrl di siaphp.json belum diisi.");
+  }
+  if (config.chunkSize !== undefined && (!Number.isInteger(config.chunkSize) || config.chunkSize < 1)) {
+    throw new Error("chunkSize di siaphp.json harus berupa bilangan positif.");
   }
   if (!Array.isArray(config.exclude)) {
     throw new Error("exclude di siaphp.json harus berupa array.");
