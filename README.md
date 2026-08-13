@@ -43,6 +43,14 @@ npx siaphp deploy --dry-run
 unzip -l .siaphp/siaphp-dry-run.zip
 ```
 
+For more information about the deployment process, use verbose output:
+
+```bash
+npx siaphp deploy --verbose
+```
+
+This displays the project root, entrypoint, agent and PHP versions, archive details, and deployment results. Secrets and archive contents are never printed.
+
 ## Agent placement
 
 ### Flat

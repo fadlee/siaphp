@@ -11,6 +11,12 @@ export async function deployCommand(options) {
   const { paths, config, credentials } = await loadProject();
   const entrypoint = path.join(paths.root, config.entrypoint);
 
+  if (options.verbose) {
+    output.info(`Project root: ${paths.root}`);
+    output.info(`Entrypoint: ${config.entrypoint}`);
+    output.info(`Agent: ${config.agentUrl}`);
+  }
+
   if (!(await fileExists(entrypoint))) {
     throw new Error(`Entrypoint tidak ditemukan: ${config.entrypoint}`);
   }
@@ -19,15 +25,21 @@ export async function deployCommand(options) {
 
   let tempDirectory;
   let archivePath;
+  let status;
 
   if (options.dryRun) {
     tempDirectory = paths.state;
     archivePath = path.join(tempDirectory, "siaphp-dry-run.zip");
   } else {
     output.step("Memeriksa agent...");
-    const status = await checkAgent(config.agentUrl, credentials.secret);
+    status = await checkAgent(config.agentUrl, credentials.secret);
     if (!status.zipArchive || !status.targetWritable) {
       throw new Error('Agent belum siap. Jalankan "siaphp doctor" untuk detailnya.');
+    }
+    if (options.verbose) {
+      output.info(`Agent version: ${status.agentVersion}`);
+      output.info(`PHP version: ${status.phpVersion}`);
+      output.info(`Agent archive limit: ${formatBytes(status.maxUploadBytes)}`);
     }
     tempDirectory = await mkdtemp(path.join(os.tmpdir(), "siaphp-"));
     archivePath = path.join(tempDirectory, "release.zip");
@@ -46,6 +58,10 @@ export async function deployCommand(options) {
     }
 
     output.success(`Archive siap: ${formatBytes(archive.bytes)}.`);
+    if (options.verbose) {
+      output.info(`Archive entries: ${archive.entries}`);
+      output.info(`Archive path: ${archivePath}`);
+    }
 
     if (options.dryRun) {
       output.success(`Dry run selesai: ${path.relative(paths.root, archivePath)}`);
@@ -59,6 +75,10 @@ export async function deployCommand(options) {
       archivePath
     });
 
+    if (options.verbose) {
+      output.info(`Release: ${result.release}`);
+      output.info(`Files deployed: ${result.deployedFiles}`);
+    }
     output.success(`Deploy ${result.release} selesai, ${result.deployedFiles} file terpasang.`);
   } finally {
     if (!options.dryRun && tempDirectory) {

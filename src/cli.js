@@ -31,7 +31,7 @@ export async function run(argv) {
   program
     .command("deploy")
     .description("Kemas dan deploy proyek ke hosting.")
-    .option("--dry-run", "buat arsip tanpa mengunggahnya")
+    .option("--verbose", "tampilkan informasi detail proses deploy")
     .option("--allow-http", "izinkan URL HTTP untuk pengembangan lokal")
     .action(deployCommand);
 
