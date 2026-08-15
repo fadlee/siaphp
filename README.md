@@ -161,7 +161,7 @@ npx siaphp init \
   --yes
 ```
 
-Use `--skip-check` if the agent has not been uploaded yet. After uploading it, run `npx siaphp doctor`.
+Upload the generated `.siaphp/siaphp-xxxxx.php` file to your hosting, then run `npx siaphp doctor` to verify.
 
 ## Publishing to npm
 

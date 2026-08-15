@@ -18,7 +18,6 @@ export async function run(argv) {
     .option("--structure <type>", "flat atau public")
     .option("--base-url <url>", "Base URL hosting tempat agent di-upload")
     .option("-y, --yes", "gunakan pilihan default tanpa wizard")
-    .option("--skip-check", "simpan konfigurasi tanpa menghubungi agent")
     .option("--allow-http", "izinkan URL HTTP untuk pengembangan lokal")
     .action(initCommand);
 

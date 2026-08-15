@@ -6,7 +6,6 @@ import { createConfig, fileExists, projectPaths, writeProjectFiles } from "../co
 import { writeIgnoreFile } from "../ignore.js";
 import { generateAgentFilename, generateSecret } from "../crypto.js";
 import { writeAgent } from "../agent.js";
-import { checkAgent } from "../http.js";
 import { output } from "../output.js";
 
 export async function initCommand(options) {
@@ -51,19 +50,8 @@ export async function initCommand(options) {
   await ensureGitignore(cwd);
 
   output.success(`${CONFIG_FILE}, ${CREDENTIALS_FILE}, dan .siaphpignore sudah dibuat.`);
-
-  if (!options.skipCheck) {
-    output.step("Menghubungi agent...");
-    try {
-      const status = await checkAgent(agentUrl, secret);
-      output.success(`Agent terhubung, PHP ${status.phpVersion}.`);
-    } catch (error) {
-      output.warning("Konfigurasi sudah disimpan, tetapi agent belum dapat diverifikasi.");
-      throw error;
-    }
-  }
-
-  output.success('Siap. Jalankan "npx siaphp doctor", lalu "npx siaphp deploy".');
+  output.info(`Upload ${agentFilename} ke hosting, lalu jalankan "npx siaphp doctor" untuk verifikasi.`);
+  output.success('Setelah doctor berhasil, jalankan "npx siaphp deploy".');
 }
 
 async function resolveStructure(cwd, options) {
