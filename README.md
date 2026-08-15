@@ -24,8 +24,8 @@ npx siaphp init
 The wizard will:
 
 1. Detect whether `index.php` is in the root directory or at `public/index.php`.
-2. Create `.siaphp/siaphp-agent.php` with a unique secret.
-3. Ask you to upload the agent to your hosting account.
+2. Create `.siaphp/siaphp-xxxxx.php` with a unique secret and a random filename.
+3. Ask for the base URL of your hosting account and tell you where to upload the agent.
 4. Save the agent URL in `siaphp.json`.
 5. Save the local secret in `.siaphp/credentials.json`.
 
@@ -55,12 +55,12 @@ This displays the project root, entrypoint, agent and PHP versions, archive deta
 
 ### Flat
 
-For projects with `index.php` in the root directory, upload the agent to the same folder:
+For projects with `index.php` in the root directory, upload the agent to the same folder. The filename is generated randomly by `init`:
 
 ```text
 public_html/
   index.php
-  siaphp-agent.php
+  siaphp-xxxxx.php
 ```
 
 ### Public folder
@@ -72,7 +72,7 @@ project/
   app/
   public/
     index.php
-    siaphp-agent.php
+    siaphp-xxxxx.php
 ```
 
 The agent installs each release into the `project` folder, one level above `public`.
@@ -150,14 +150,14 @@ The default chunk size is 8 MB. You can lower it in `siaphp.json` when the hosti
 }
 ```
 
-Chunked upload requires a newly generated agent from the same siaphp release. Upload `.siaphp/siaphp-agent.php` again after upgrading the CLI. Existing agents report `chunkUpload: false` or omit the field and will produce the normal archive-size error.
+Chunked upload requires a newly generated agent from the same siaphp release. Run `siaphp init` again and upload the new `.siaphp/siaphp-xxxxx.php` file after upgrading the CLI. Existing agents report `chunkUpload: false` or omit the field and will produce the normal archive-size error.
 
 ## Non-interactive mode
 
 ```bash
 npx siaphp init \
   --structure public \
-  --agent-url https://example.com/siaphp-agent.php \
+  --base-url https://example.com \
   --yes
 ```
 

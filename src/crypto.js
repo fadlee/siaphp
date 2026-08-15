@@ -4,6 +4,11 @@ export function generateSecret() {
   return randomBytes(32).toString("hex");
 }
 
+export function generateAgentFilename() {
+  const id = randomBytes(6).toString("hex");
+  return `siaphp-${id}.php`;
+}
+
 export function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
 }

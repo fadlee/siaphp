@@ -1,10 +1,10 @@
 import { appendFile, mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { confirm, input, select } from "@inquirer/prompts";
-import { AGENT_FILE, CONFIG_FILE, CREDENTIALS_FILE } from "../constants.js";
+import { CONFIG_FILE, CREDENTIALS_FILE, STATE_DIRECTORY } from "../constants.js";
 import { createConfig, fileExists, projectPaths, writeProjectFiles } from "../config.js";
 import { writeIgnoreFile } from "../ignore.js";
-import { generateSecret } from "../crypto.js";
+import { generateAgentFilename, generateSecret } from "../crypto.js";
 import { writeAgent } from "../agent.js";
 import { checkAgent } from "../http.js";
 import { output } from "../output.js";
@@ -30,15 +30,19 @@ export async function initCommand(options) {
 
   const structure = await resolveStructure(cwd, options);
   const secret = generateSecret();
+  const agentFilename = generateAgentFilename();
+  const agentPath = path.join(cwd, STATE_DIRECTORY, agentFilename);
+  const agentRelativePath = path.join(STATE_DIRECTORY, agentFilename);
+
   await mkdir(paths.state, { recursive: true, mode: 0o700 });
-  const agentPath = path.join(cwd, AGENT_FILE);
   await writeAgent(agentPath, { secret, structure });
 
-  output.success(`Agent dibuat di ${AGENT_FILE}`);
-  output.info(agentInstruction(structure));
+  output.success(`Agent dibuat di ${agentRelativePath}`);
+  output.info(agentInstruction(structure, agentFilename));
 
-  const agentUrl = await resolveAgentUrl(options);
-  validateAgentUrl(agentUrl, options.allowHttp);
+  const baseUrl = await resolveBaseUrl(options);
+  validateBaseUrl(baseUrl, options.allowHttp);
+  const agentUrl = buildAgentUrl(baseUrl, agentFilename);
 
   const config = createConfig({ structure, agentUrl });
   const credentials = { schemaVersion: 1, secret };
@@ -83,17 +87,17 @@ async function resolveStructure(cwd, options) {
   });
 }
 
-async function resolveAgentUrl(options) {
-  if (options.agentUrl) return normalizeUrl(options.agentUrl);
+async function resolveBaseUrl(options) {
+  if (options.baseUrl) return normalizeBaseUrl(options.baseUrl);
   if (options.yes) {
-    throw new Error("--agent-url wajib diisi ketika menggunakan --yes.");
+    throw new Error("--base-url wajib diisi ketika menggunakan --yes.");
   }
 
   const value = await input({
-    message: "URL agent yang sudah di-upload:",
+    message: "Base URL hosting (domain atau subfolder tempat agent di-upload):",
     validate: (url) => {
       try {
-        normalizeUrl(url);
+        normalizeBaseUrl(url);
         return true;
       } catch (error) {
         return error.message;
@@ -101,25 +105,26 @@ async function resolveAgentUrl(options) {
     }
   });
 
-  return normalizeUrl(value);
+  return normalizeBaseUrl(value);
 }
 
-function normalizeUrl(value) {
+function normalizeBaseUrl(value) {
   let url;
   try {
     url = new URL(value);
   } catch {
-    throw new Error("URL agent tidak valid.");
+    throw new Error("Base URL tidak valid.");
   }
 
   if (!["http:", "https:"].includes(url.protocol)) {
-    throw new Error("URL agent harus menggunakan HTTP atau HTTPS.");
+    throw new Error("Base URL harus menggunakan HTTP atau HTTPS.");
   }
   url.hash = "";
+  url.pathname = url.pathname.replace(/\/$/, "");
   return url.toString();
 }
 
-function validateAgentUrl(value, allowHttp) {
+function validateBaseUrl(value, allowHttp) {
   const url = new URL(value);
   const local = ["localhost", "127.0.0.1", "::1"].includes(url.hostname);
   if (url.protocol !== "https:" && !local && !allowHttp) {
@@ -127,11 +132,16 @@ function validateAgentUrl(value, allowHttp) {
   }
 }
 
-function agentInstruction(structure) {
+function buildAgentUrl(baseUrl, filename) {
+  const separator = baseUrl.endsWith("/") ? "" : "/";
+  return `${baseUrl}${separator}${filename}`;
+}
+
+function agentInstruction(structure, agentFilename) {
   if (structure === "public") {
-    return `Upload ${AGENT_FILE} ke document root public, misalnya public/siaphp-agent.php.`;
+    return `Upload ${agentFilename} ke document root public, misalnya public/${agentFilename}.`;
   }
-  return `Upload ${AGENT_FILE} ke folder yang sama dengan index.php.`;
+  return `Upload ${agentFilename} ke folder yang sama dengan index.php.`;
 }
 
 async function ensureGitignore(cwd) {
