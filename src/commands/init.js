@@ -3,6 +3,7 @@ import path from "node:path";
 import { confirm, input, select } from "@inquirer/prompts";
 import { AGENT_FILE, CONFIG_FILE, CREDENTIALS_FILE } from "../constants.js";
 import { createConfig, fileExists, projectPaths, writeProjectFiles } from "../config.js";
+import { writeIgnoreFile } from "../ignore.js";
 import { generateSecret } from "../crypto.js";
 import { writeAgent } from "../agent.js";
 import { checkAgent } from "../http.js";
@@ -42,9 +43,10 @@ export async function initCommand(options) {
   const config = createConfig({ structure, agentUrl });
   const credentials = { schemaVersion: 1, secret };
   await writeProjectFiles(cwd, config, credentials);
+  await writeIgnoreFile(cwd);
   await ensureGitignore(cwd);
 
-  output.success(`${CONFIG_FILE} dan ${CREDENTIALS_FILE} sudah dibuat.`);
+  output.success(`${CONFIG_FILE}, ${CREDENTIALS_FILE}, dan .siaphpignore sudah dibuat.`);
 
   if (!options.skipCheck) {
     output.step("Menghubungi agent...");

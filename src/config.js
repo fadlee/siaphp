@@ -7,6 +7,7 @@ import {
   DEFAULT_EXCLUDES,
   STATE_DIRECTORY
 } from "./constants.js";
+import { resolveProjectExcludes } from "./ignore.js";
 
 export function projectPaths(cwd = process.cwd()) {
   const root = path.resolve(cwd);
@@ -53,6 +54,8 @@ export async function loadProject(cwd = process.cwd()) {
 
   validateConfig(config);
   validateCredentials(credentials);
+
+  config.exclude = await resolveProjectExcludes(config.exclude, paths.root);
 
   return { paths, config, credentials };
 }

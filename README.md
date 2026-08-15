@@ -103,6 +103,26 @@ Example `siaphp.json`:
 
 Adjust `exclude` if your project needs additional files excluded. The `vendor` directory is intentionally not excluded because many shared hosts do not provide Composer.
 
+## `.siaphpignore`
+
+For larger or shared projects, you can maintain exclusions in a `.siaphpignore` file in the project root. `siaphp init` creates a sample file automatically.
+
+Example `.siaphpignore`:
+
+```text
+# Additional exclusions on top of the default security rules.
+*.log
+.github/
+tests/
+```
+
+Rules:
+
+- One glob pattern per line.
+- Empty lines and lines starting with `#` are ignored.
+- These patterns are merged with the default excludes (`.git`, `.siaphp`, `.env`, `.env.*`, `node_modules`, `siaphp.json`) and any `exclude` array in `siaphp.json`.
+- Negation with `!` is not supported yet.
+
 ## Security
 
 - Every request uses HMAC SHA-256, a timestamp, and a one-time nonce.
